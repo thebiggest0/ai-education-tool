@@ -4,6 +4,7 @@ import { config } from './config/env.js';
 import { authenticate } from './middleware/authenticate.js';
 import { authController } from './controllers/authController.js';
 import { passwordResetController } from './controllers/passwordResetController.js';
+import { aiController } from './controllers/aiController.js';
 
 const app = express();
 
@@ -18,6 +19,8 @@ app.get('/auth/me', authenticate, authController.me);
 
 app.post('/auth/forgot-password', passwordResetController.forgotPassword);
 app.post('/auth/reset-password', passwordResetController.resetPassword);
+
+app.post('/ai/prompt', authenticate, aiController.sendPrompt);
 
 /**
  * Starts the API Gateway server.
