@@ -3,6 +3,7 @@ import cors from 'cors';
 import { config } from './config/env.js';
 import { authenticate } from './middleware/authenticate.js';
 import { authController } from './controllers/authController.js';
+import { passwordResetController } from './controllers/passwordResetController.js';
 
 const app = express();
 
@@ -14,6 +15,9 @@ app.post('/auth/login', authController.login);
 app.post('/auth/refresh', authController.refresh);
 app.post('/auth/logout', authenticate, authController.logout);
 app.get('/auth/me', authenticate, authController.me);
+
+app.post('/auth/forgot-password', passwordResetController.forgotPassword);
+app.post('/auth/reset-password', passwordResetController.resetPassword);
 
 /**
  * Starts the API Gateway server.
