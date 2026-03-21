@@ -93,4 +93,38 @@ async function getCurrentUser(): Promise<User | null> {
   return data as User;
 }
 
-export const authService = { register, login, logout, getCurrentUser };
+/**
+ * Requests a password reset email for the given address.
+ * Always resolves successfully to prevent user enumeration.
+ *
+ * @param email - The email address to send the reset link to.
+ */
+async function forgotPassword(email: string): Promise<void> {
+  await api.request('/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+/**
+ * Resets a user's password using the token from the email link.
+ *
+ * @param token - The reset token from the URL.
+ * @param newPassword - The new password to set.
+ * @throws Error if the token is invalid/expired or the reset fails.
+ */
+async function resetPassword(token: string, newPassword: string): Promise<void> {
+  const { data, status } = await api.request<{ message: string } | ErrorResponse>(
+    '/auth/reset-password',
+    {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword }),
+    }
+  );
+
+  if (status !== 200) {
+    throw new Error((data as ErrorResponse).error || 'Password reset failed');
+  }
+}
+
+export const authService = { register, login, logout, getCurrentUser, forgotPassword, resetPassword };

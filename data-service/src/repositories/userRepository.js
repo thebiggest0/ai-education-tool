@@ -82,10 +82,28 @@ async function updateRole(id, role) {
   return result.rows[0] || null;
 }
 
+/**
+ * Updates a user's password hash.
+ *
+ * @param {string} id - The UUID of the user.
+ * @param {string} passwordHash - The new bcrypt-hashed password.
+ * @returns {Promise<object|null>} The updated user record, or null if not found.
+ */
+async function updatePassword(id, passwordHash) {
+  const result = await writePool.query(
+    `UPDATE users SET password_hash = $1, updated_at = NOW()
+     WHERE id = $2
+     RETURNING id, username, email, role, created_at, updated_at`,
+    [passwordHash, id]
+  );
+  return result.rows[0] || null;
+}
+
 export const userRepository = {
   create,
   findByEmail,
   findByUsername,
   findById,
   updateRole,
+  updatePassword,
 };

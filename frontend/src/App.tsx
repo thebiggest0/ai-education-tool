@@ -7,6 +7,8 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AdminPage } from './pages/AdminPage';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 
 /**
  * Root application component that sets up routing and authentication context.
@@ -51,6 +53,15 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/forgot-password"
+            element={
+              <PublicRoute>
+                <ForgotPasswordPage />
+              </PublicRoute>
+            }
+          />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
