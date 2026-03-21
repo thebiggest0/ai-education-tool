@@ -4,6 +4,7 @@ import { initializeDatabase } from './config/database.js';
 import { requireInternalSecret } from './middleware/internalAuth.js';
 import { userController } from './controllers/userController.js';
 import { tokenController } from './controllers/tokenController.js';
+import { passwordResetController } from './controllers/passwordResetController.js';
 
 dotenv.config();
 
@@ -22,6 +23,10 @@ app.post('/internal/tokens/store', tokenController.storeToken);
 app.post('/internal/tokens/verify', tokenController.verifyToken);
 app.post('/internal/tokens/rotate', tokenController.rotateToken);
 app.delete('/internal/tokens/revoke', tokenController.revokeToken);
+
+app.post('/internal/password-reset/store', passwordResetController.storeResetToken);
+app.post('/internal/password-reset/verify', passwordResetController.verifyResetToken);
+app.post('/internal/password-reset/reset', passwordResetController.resetPassword);
 
 /**
  * Starts the data service server and initializes the database schema.
