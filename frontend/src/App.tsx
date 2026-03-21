@@ -18,7 +18,7 @@ import { AiChatPage } from './pages/AiChatPage';
  */
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename='/ai-education-tool/'>
       <AuthProvider>
         <Routes>
           <Route path="/" element={<LandingPage />} />
