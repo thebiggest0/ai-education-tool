@@ -9,6 +9,37 @@ interface Message {
 }
 
 /**
+ * Converts AI service response payloads into readable chat text.
+ * Handles sentiment prediction arrays like [{ label, score }].
+ */
+function formatAiResponse(response: Record<string, unknown>): string {
+  const predictionValue = response.prediction;
+
+  if (Array.isArray(predictionValue) && predictionValue.length > 0) {
+    const firstPrediction = predictionValue[0];
+
+    if (firstPrediction && typeof firstPrediction === 'object') {
+      const prediction = firstPrediction as Record<string, unknown>;
+      const label = prediction.label;
+      const score = prediction.score;
+
+      if (typeof label === 'string' && typeof score === 'number') {
+        return `Sentiment: ${label}\nScore: ${score.toFixed(6)}`;
+      }
+    }
+
+    return JSON.stringify(predictionValue, null, 2);
+  }
+
+  const preferredText = response.response ?? response.message ?? response.text;
+  if (typeof preferredText === 'string') {
+    return preferredText;
+  }
+
+  return JSON.stringify(response, null, 2);
+}
+
+/**
  * AI Chat page where authenticated users can send prompts to the AI microservice
  * and view the responses in a conversational interface.
  *
@@ -46,16 +77,8 @@ function AiChatPage() {
 
     try {
       const response = await aiService.sendPrompt(trimmed);
-      // TODO (partner): Adjust this to match the actual response shape from your AI service.
-      // For example, response.prediction, response.message, response.text, etc.
-      const aiText =
-        (response as Record<string, unknown>).response ??
-        (response as Record<string, unknown>).prediction ??
-        (response as Record<string, unknown>).message ??
-        (response as Record<string, unknown>).text ??
-        JSON.stringify(response);
-
-      setMessages((prev) => [...prev, { role: 'ai', content: String(aiText) }]);
+      const aiText = formatAiResponse(response as Record<string, unknown>);
+      setMessages((prev) => [...prev, { role: 'ai', content: aiText }]);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Something went wrong';
       setError(message);
