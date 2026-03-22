@@ -65,6 +65,17 @@ function DashboardPage() {
             <p className="mt-2 text-lg font-semibold text-slate-900 capitalize">{user?.role}</p>
           </div>
         </div>
+
+        {/* AI Chat quick access */}
+        <div className="mt-8">
+          <button
+            onClick={() => navigate('/ai-chat')}
+            className="inline-flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors"
+          >
+            <span>Open AI Chat</span>
+            <span aria-hidden="true">&rarr;</span>
+          </button>
+        </div>
       </main>
     </div>
   );

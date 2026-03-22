@@ -4,7 +4,10 @@ import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  base: '/ai-education-tool/',
   server: {
+    port: 5179,
+    strictPort: true,
     proxy: {
       '/api': {
         target: 'http://localhost:3009',

@@ -11,4 +11,5 @@ export const config = {
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5179',
   resendApiKey: process.env.RESEND_API_KEY,
   resendFromEmail: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
+  aiServiceUrl: process.env.AI_SERVICE_URL || 'http://localhost:5000',
 };

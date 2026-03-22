@@ -9,6 +9,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { AdminPage } from './pages/AdminPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
+import { AiChatPage } from './pages/AiChatPage';
 
 /**
  * Root application component that sets up routing and authentication context.
@@ -17,7 +18,7 @@ import { ResetPasswordPage } from './pages/ResetPasswordPage';
  */
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename='/ai-education-tool/'>
       <AuthProvider>
         <Routes>
           <Route path="/" element={<LandingPage />} />
@@ -62,6 +63,14 @@ function App() {
             }
           />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route
+            path="/ai-chat"
+            element={
+              <ProtectedRoute>
+                <AiChatPage />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
