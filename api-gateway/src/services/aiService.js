@@ -17,9 +17,9 @@ async function sendPrompt({ prompt, userId }) {
   // e.g., '/predict', '/chat', '/generate', '/completions'
   // The body shape should match what your model endpoint expects.
   // ──────────────────────────────────────────────────────────
-  const response = await aiServiceClient.request('/predict', {
+  const response = await aiServiceClient.request('/analyze', {
     method: 'POST',
-    body: { prompt, userId },
+    body: { text: prompt, userId },
   });
 
   if (response.status !== 200) {
@@ -29,6 +29,7 @@ async function sendPrompt({ prompt, userId }) {
     throw error;
   }
 
+  console.log('AI service response:', response.data);
   return response.data;
 }
 
