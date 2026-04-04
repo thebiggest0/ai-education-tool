@@ -1,25 +1,34 @@
 import { aiServiceClient } from '../utils/aiServiceClient.js';
 
 /**
- * Sends a user prompt to the AI microservice and returns the response.
- * This is the main integration point — your partner should update the
- * endpoint path and request/response shape to match their AI service API.
+ * Sends a user prompt or answer comparison to the AI microservice.
+ * Handles both legacy prompt mode and new answer comparison mode.
  *
  * @param {object} params - The request parameters.
- * @param {string} params.prompt - The user's input text.
+ * @param {string} [params.prompt] - The user's input text (legacy mode).
+ * @param {string} [params.student_answer] - The student's answer (answer comparison mode).
+ * @param {string} [params.correct_answer] - The correct answer (answer comparison mode).
  * @param {string} params.userId - The authenticated user's ID (for context/logging).
  * @returns {Promise<object>} The AI service response data.
  * @throws {Error} If the AI service returns an error or is unreachable.
  */
-async function sendPrompt({ prompt, userId }) {
-  // ──────────────────────────────────────────────────────────
-  // TODO (partner): Update the path and body to match your AI service API.
-  // e.g., '/predict', '/chat', '/generate', '/completions'
-  // The body shape should match what your model endpoint expects.
-  // ──────────────────────────────────────────────────────────
+async function sendPrompt({ prompt, student_answer, correct_answer, userId }) {
+  let body;
+
+  // Determine which mode this is based on the parameters provided
+  if (student_answer && correct_answer) {
+    // Answer comparison mode
+    body = { student_answer, correct_answer };
+  } else if (prompt) {
+    // Legacy prompt mode
+    body = { text: prompt };
+  } else {
+    throw new Error('Invalid request: must provide either prompt or student_answer/correct_answer');
+  }
+
   const response = await aiServiceClient.request('/analyze', {
     method: 'POST',
-    body: { text: prompt, userId },
+    body,
   });
 
   if (response.status !== 200) {

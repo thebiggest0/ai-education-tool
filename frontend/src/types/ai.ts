@@ -7,6 +7,16 @@ export interface AiPromptResponse {
   [key: string]: unknown;
 }
 
+export interface AnswerComparisonRequest {
+  studentAnswer: string;
+  correctAnswer: string;
+}
+
+export interface AnswerComparisonResponse {
+  score: number;
+  feedback: string;
+}
+
 export interface AiErrorResponse {
   error: string;
   code: string;
