@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { aiService } from '../services/aiService';
+import * as questionService from '../services/questionService';
 import type { AnswerComparisonResponse } from '../types/ai';
 
 interface Message {
@@ -10,11 +11,6 @@ interface Message {
   score?: number;
   feedback?: string;
 }
-
-// Hardcoded question and correct answer
-const QUESTION = 'What is the difference between symmetric and asymmetric encryptions?';
-const CORRECT_ANSWER =
-  'Symmetric encryption uses one shared key for both locking and unlocking, while asymmetric encryption uses a public key to lock and a private key to unlock.';
 
 /**
  * AI Chat page where authenticated users can answer educational questions
@@ -28,12 +24,47 @@ function AiChatPage() {
   const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingQuestion, setIsFetchingQuestion] = useState(true);
   const [error, setError] = useState('');
   const [answered, setAnswered] = useState(false);
+  const [activeQuestion, setActiveQuestion] = useState<string | null>(null);
+  const [answerKey, setAnswerKey] = useState<string | null>(null);
+  const [questionNotFound, setQuestionNotFound] = useState(false);
 
-  // Display the question when component mounts
+  // Fetch the active question when component mounts
   useEffect(() => {
-    setMessages([{ role: 'ai', content: QUESTION }]);
+    async function loadQuestion() {
+      try {
+        setIsFetchingQuestion(true);
+        const question = await questionService.getActiveQuestionForStudent();
+        if (question) {
+          setActiveQuestion(question.question_text);
+          setMessages([{ role: 'ai', content: question.question_text }]);
+          // We don't need answer_key here, but we'll fetch it later during submission
+        } else {
+          setQuestionNotFound(true);
+          setMessages([
+            {
+              role: 'ai',
+              content: 'No active question available at the moment. Please check back later.',
+            },
+          ]);
+        }
+      } catch (err) {
+        console.error('Error loading question:', err);
+        setError('Failed to load the question. Please refresh the page.');
+        setMessages([
+          {
+            role: 'ai',
+            content: 'Failed to load the question. Please try again.',
+          },
+        ]);
+      } finally {
+        setIsFetchingQuestion(false);
+      }
+    }
+
+    loadQuestion();
   }, []);
 
   /**
@@ -50,7 +81,7 @@ function AiChatPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = prompt.trim();
-    if (!trimmed || isLoading) return;
+    if (!trimmed || isLoading || questionNotFound) return;
 
     setError('');
     setMessages((prev) => [...prev, { role: 'user', content: trimmed }]);
@@ -59,7 +90,14 @@ function AiChatPage() {
     setAnswered(true);
 
     try {
-      const response = await aiService.evaluateAnswer(trimmed, CORRECT_ANSWER);
+      // Fetch the answer key for validation
+      const activeQ = await questionService.getActiveQuestion();
+      if (!activeQ) {
+        setError('The question is no longer active. Please try again.');
+        return;
+      }
+
+      const response = await aiService.evaluateAnswer(trimmed, activeQ.answer_key || '');
       setMessages((prev) => [
         ...prev,
         {
@@ -165,11 +203,11 @@ function AiChatPage() {
             onChange={(e) => setPrompt(e.target.value)}
             placeholder={answered ? 'Type your next answer...' : 'Type your answer...'}
             className="flex-1 px-4 py-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
-            disabled={isLoading}
+            disabled={isLoading || questionNotFound || isFetchingQuestion}
           />
           <button
             type="submit"
-            disabled={isLoading || !prompt.trim()}
+            disabled={isLoading || !prompt.trim() || questionNotFound || isFetchingQuestion}
             className="px-5 py-3 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Submit

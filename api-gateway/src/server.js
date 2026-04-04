@@ -5,6 +5,7 @@ import { authenticate } from './middleware/authenticate.js';
 import { authController } from './controllers/authController.js';
 import { passwordResetController } from './controllers/passwordResetController.js';
 import { aiController } from './controllers/aiController.js';
+import * as questionController from './controllers/questionController.js';
 
 const app = express();
 
@@ -21,6 +22,19 @@ app.post('/auth/forgot-password', passwordResetController.forgotPassword);
 app.post('/auth/reset-password', passwordResetController.resetPassword);
 
 app.post('/ai/prompt', authenticate, aiController.sendPrompt);
+
+// Question endpoints - public reads for students
+app.get('/questions/active-student', questionController.getActiveQuestionForStudent);
+
+// Question endpoints - authenticated instructor operations
+app.get('/questions/active', authenticate, questionController.getActiveQuestion);
+app.get('/questions/instructor', authenticate, questionController.getInstructorQuestions);
+app.get('/questions/:id', authenticate, questionController.getQuestion);
+app.post('/questions', authenticate, questionController.createQuestion);
+app.put('/questions/:id', authenticate, questionController.updateQuestion);
+app.post('/questions/:id/activate', authenticate, questionController.activateQuestion);
+app.post('/questions/:id/deactivate', authenticate, questionController.deactivateQuestion);
+app.delete('/questions/:id', authenticate, questionController.deleteQuestion);
 
 /**
  * Starts the API Gateway server.

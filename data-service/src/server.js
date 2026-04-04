@@ -5,6 +5,7 @@ import { requireInternalSecret } from './middleware/internalAuth.js';
 import { userController } from './controllers/userController.js';
 import { tokenController } from './controllers/tokenController.js';
 import { passwordResetController } from './controllers/passwordResetController.js';
+import * as questionController from './controllers/questionController.js';
 
 dotenv.config();
 
@@ -27,6 +28,16 @@ app.delete('/internal/tokens/revoke', tokenController.revokeToken);
 app.post('/internal/password-reset/store', passwordResetController.storeResetToken);
 app.post('/internal/password-reset/verify', passwordResetController.verifyResetToken);
 app.post('/internal/password-reset/reset', passwordResetController.resetPassword);
+
+app.get('/internal/questions/active', questionController.getActiveQuestion);
+app.get('/internal/questions/active-student', questionController.getActiveQuestionForStudent);
+app.get('/internal/questions/instructor', questionController.getInstructorQuestions);
+app.get('/internal/questions/:id', questionController.getQuestion);
+app.post('/internal/questions', questionController.createQuestion);
+app.put('/internal/questions/:id', questionController.updateQuestion);
+app.post('/internal/questions/:id/activate', questionController.activateQuestion);
+app.post('/internal/questions/:id/deactivate', questionController.deactivateQuestion);
+app.delete('/internal/questions/:id', questionController.deleteQuestion);
 
 /**
  * Starts the data service server and initializes the database schema.

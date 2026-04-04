@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { QuestionManager } from '../components/QuestionManager';
 
 /**
  * Admin dashboard page displaying admin user info and admin-specific status.
@@ -73,6 +74,8 @@ function AdminPage() {
             </div>
           </div>
         </div>
+
+        <QuestionManager />
       </main>
     </div>
   );
