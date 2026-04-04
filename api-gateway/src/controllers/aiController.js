@@ -1,16 +1,43 @@
 import { aiService } from '../services/aiService.js';
 
 /**
- * Handles requests to send a prompt to the AI service.
+ * Handles requests to send a prompt or compare answers to the AI service.
+ * Supports both legacy prompt format and new answer comparison format.
  * Requires authentication — the user's ID is forwarded to the AI service.
  *
- * @param {import('express').Request} req - The request containing the prompt.
+ * @param {import('express').Request} req - The request containing either prompt or studentAnswer/correctAnswer.
  * @param {import('express').Response} res - The response with the AI output.
  */
 async function sendPrompt(req, res) {
   try {
-    const { prompt } = req.body;
+    const { prompt, studentAnswer, correctAnswer } = req.body;
 
+    // Check if this is an answer comparison request
+    if (studentAnswer || correctAnswer) {
+      if (!studentAnswer || typeof studentAnswer !== 'string' || studentAnswer.trim().length === 0) {
+        return res.status(400).json({
+          error: 'Student answer is required',
+          code: 'MISSING_STUDENT_ANSWER',
+        });
+      }
+
+      if (!correctAnswer || typeof correctAnswer !== 'string' || correctAnswer.trim().length === 0) {
+        return res.status(400).json({
+          error: 'Correct answer is required',
+          code: 'MISSING_CORRECT_ANSWER',
+        });
+      }
+
+      const result = await aiService.sendPrompt({
+        student_answer: studentAnswer.trim(),
+        correct_answer: correctAnswer.trim(),
+        userId: req.user.userId,
+      });
+
+      return res.json(result);
+    }
+
+    // Otherwise, treat as legacy prompt request
     if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
       return res.status(400).json({
         error: 'Prompt is required',

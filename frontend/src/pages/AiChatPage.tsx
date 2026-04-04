@@ -1,47 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { aiService } from '../services/aiService';
+import type { AnswerComparisonResponse } from '../types/ai';
 
 interface Message {
   role: 'user' | 'ai';
   content: string;
+  score?: number;
+  feedback?: string;
 }
 
-/**
- * Converts AI service response payloads into readable chat text.
- * Handles sentiment prediction arrays like [{ label, score }].
- */
-function formatAiResponse(response: Record<string, unknown>): string {
-  const predictionValue = response.prediction;
-
-  if (Array.isArray(predictionValue) && predictionValue.length > 0) {
-    const firstPrediction = predictionValue[0];
-
-    if (firstPrediction && typeof firstPrediction === 'object') {
-      const prediction = firstPrediction as Record<string, unknown>;
-      const label = prediction.label;
-      const score = prediction.score;
-
-      if (typeof label === 'string' && typeof score === 'number') {
-        return `Sentiment: ${label}\nScore: ${score.toFixed(6)}`;
-      }
-    }
-
-    return JSON.stringify(predictionValue, null, 2);
-  }
-
-  const preferredText = response.response ?? response.message ?? response.text;
-  if (typeof preferredText === 'string') {
-    return preferredText;
-  }
-
-  return JSON.stringify(response, null, 2);
-}
+// Hardcoded question and correct answer
+const QUESTION = 'What is the difference between symmetric and asymmetric encryptions?';
+const CORRECT_ANSWER =
+  'Symmetric encryption uses one shared key for both locking and unlocking, while asymmetric encryption uses a public key to lock and a private key to unlock.';
 
 /**
- * AI Chat page where authenticated users can send prompts to the AI microservice
- * and view the responses in a conversational interface.
+ * AI Chat page where authenticated users can answer educational questions
+ * and receive AI-powered feedback on their answers.
  *
  * @returns The AI chat page content.
  */
@@ -52,6 +29,12 @@ function AiChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [answered, setAnswered] = useState(false);
+
+  // Display the question when component mounts
+  useEffect(() => {
+    setMessages([{ role: 'ai', content: QUESTION }]);
+  }, []);
 
   /**
    * Handles the logout action, clearing auth state and redirecting to login.
@@ -62,8 +45,7 @@ function AiChatPage() {
   }
 
   /**
-   * Sends the current prompt to the AI service and appends both
-   * the user message and AI response to the conversation.
+   * Sends the student answer to the AI service for evaluation against the correct answer.
    */
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -74,11 +56,19 @@ function AiChatPage() {
     setMessages((prev) => [...prev, { role: 'user', content: trimmed }]);
     setPrompt('');
     setIsLoading(true);
+    setAnswered(true);
 
     try {
-      const response = await aiService.sendPrompt(trimmed);
-      const aiText = formatAiResponse(response as Record<string, unknown>);
-      setMessages((prev) => [...prev, { role: 'ai', content: aiText }]);
+      const response = await aiService.evaluateAnswer(trimmed, CORRECT_ANSWER);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'ai',
+          content: response.feedback,
+          score: response.score,
+          feedback: response.feedback,
+        },
+      ]);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Something went wrong';
       setError(message);
@@ -128,15 +118,6 @@ function AiChatPage() {
       {/* Chat area */}
       <main className="flex-1 max-w-3xl w-full mx-auto px-6 py-6 flex flex-col">
         <div className="flex-1 overflow-y-auto space-y-4 mb-4">
-          {messages.length === 0 && (
-            <div className="text-center py-20">
-              <h2 className="text-xl font-semibold text-slate-700">Ask AI to analyze sentiment</h2>
-              <p className="mt-2 text-sm text-slate-400">
-                Type a prompt below to get started.
-              </p>
-            </div>
-          )}
-
           {messages.map((msg, i) => (
             <div
               key={i}
@@ -150,6 +131,13 @@ function AiChatPage() {
                 }`}
               >
                 {msg.content}
+                {msg.score !== undefined && (
+                  <div className="mt-3 pt-3 border-t border-slate-200">
+                    <div className="text-xs font-semibold text-indigo-600">
+                      Similarity Score: {(msg.score * 100).toFixed(1)}%
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -157,7 +145,7 @@ function AiChatPage() {
           {isLoading && (
             <div className="flex justify-start">
               <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-400">
-                Thinking...
+                Evaluating your answer...
               </div>
             </div>
           )}
@@ -175,7 +163,7 @@ function AiChatPage() {
             type="text"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Type your prompt..."
+            placeholder={answered ? 'Type your next answer...' : 'Type your answer...'}
             className="flex-1 px-4 py-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
             disabled={isLoading}
           />
@@ -184,7 +172,7 @@ function AiChatPage() {
             disabled={isLoading || !prompt.trim()}
             className="px-5 py-3 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Send
+            Submit
           </button>
         </form>
       </main>
