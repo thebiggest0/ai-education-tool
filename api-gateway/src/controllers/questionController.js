@@ -20,7 +20,7 @@ export async function getInstructorQuestions(req, res) {
 export async function getActiveQuestion(req, res) {
   try {
     const question = await questionService.getActiveQuestion();
-    res.json(question || {});
+    res.json(question || null);
   } catch (error) {
     console.error('Error fetching active question:', error);
     res.status(500).json({ error: error.message });
@@ -33,7 +33,7 @@ export async function getActiveQuestion(req, res) {
 export async function getActiveQuestionForStudent(req, res) {
   try {
     const question = await questionService.getActiveQuestionForStudent();
-    res.json(question || {});
+    res.json(question || null);
   } catch (error) {
     console.error('Error fetching active question for student:', error);
     res.status(500).json({ error: error.message });
