@@ -31,6 +31,8 @@ function AiChatPage() {
   const [error, setError] = useState('');
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
   const [questionNotFound, setQuestionNotFound] = useState(false);
+  const [remainingCalls, setRemainingCalls] = useState<number | null>(null);
+  const [maxFreeCalls, setMaxFreeCalls] = useState<number>(1000);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   /**
@@ -89,6 +91,10 @@ function AiChatPage() {
         }
 
         setMessages(chatMessages);
+
+        const usage = await responseService.getMyApiUsage();
+        setRemainingCalls(usage.remainingCalls);
+        setMaxFreeCalls(usage.maxFreeCalls);
       } catch (err) {
         console.error('Error loading question:', err);
         setError('Failed to load the question. Please refresh the page.');
@@ -121,7 +127,7 @@ function AiChatPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = prompt.trim();
-    if (!trimmed || isLoading || questionNotFound || !activeQuestionId) return;
+    if (!trimmed || isLoading || questionNotFound || !activeQuestionId || remainingCalls === 0) return;
 
     setError('');
     setMessages((prev) => [...prev, { role: 'user', content: trimmed }]);
@@ -156,6 +162,8 @@ function AiChatPage() {
         aiResponse.score,
         aiResponse.feedback
       );
+
+      setRemainingCalls((prev) => (prev !== null ? Math.max(0, prev - 1) : prev));
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Something went wrong';
       setError(message);
@@ -269,19 +277,44 @@ function AiChatPage() {
               </div>
             )}
 
+            {/* Usage indicator */}
+            {remainingCalls !== null && (
+              <div className={`mb-3 flex items-center justify-between px-4 py-2 rounded-lg text-xs font-medium ${
+                remainingCalls === 0
+                  ? 'bg-red-50 border border-red-200 text-red-600'
+                  : remainingCalls <= 100
+                    ? 'bg-amber-50 border border-amber-200 text-amber-700'
+                    : 'bg-slate-50 border border-slate-200 text-slate-500'
+              }`}>
+                <span>
+                  {remainingCalls === 0
+                    ? 'You have reached your free API call limit.'
+                    : `${remainingCalls} of ${maxFreeCalls} free calls remaining`}
+                </span>
+                <div className="w-24 bg-slate-200 rounded-full h-1.5 ml-3">
+                  <div
+                    className={`h-1.5 rounded-full ${
+                      remainingCalls === 0 ? 'bg-red-500' : remainingCalls <= 100 ? 'bg-amber-500' : 'bg-indigo-500'
+                    }`}
+                    style={{ width: `${((maxFreeCalls - remainingCalls) / maxFreeCalls) * 100}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Input */}
             <form onSubmit={handleSubmit} className="flex gap-3">
               <input
                 type="text"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Type your answer..."
-                className="flex-1 px-4 py-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
-                disabled={isLoading}
+                placeholder={remainingCalls === 0 ? 'API call limit reached' : 'Type your answer...'}
+                className="flex-1 px-4 py-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white disabled:bg-slate-50"
+                disabled={isLoading || remainingCalls === 0}
               />
               <button
                 type="submit"
-                disabled={isLoading || !prompt.trim()}
+                disabled={isLoading || !prompt.trim() || remainingCalls === 0}
                 className="px-5 py-3 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Submit
