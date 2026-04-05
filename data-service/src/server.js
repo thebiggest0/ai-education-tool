@@ -43,6 +43,8 @@ app.delete('/internal/questions/:id', questionController.deleteQuestion);
 app.post('/internal/responses', responseController.saveResponse);
 app.get('/internal/responses/question/:questionId', responseController.getResponseHistory);
 app.get('/internal/responses/user', responseController.getAllUserResponses);
+app.get('/internal/responses/usage', responseController.getUserApiCallCount);
+app.get('/internal/responses/usage/all', responseController.getAllUsersApiUsage);
 
 /**
  * Starts the data service server and initializes the database schema.

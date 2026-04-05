@@ -83,3 +83,41 @@ export async function getAllUserResponses(req, res) {
     res.status(500).json({ error: error.message });
   }
 }
+
+/**
+ * Returns the API call count for a specific user.
+ * Expects x-user-id header.
+ *
+ * @param {import('express').Request} req - The incoming request.
+ * @param {import('express').Response} res - The outgoing response.
+ */
+export async function getUserApiCallCount(req, res) {
+  try {
+    const userId = req.headers['x-user-id'];
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID required' });
+    }
+
+    const count = await responseService.getUserApiCallCount(userId);
+    res.json({ userId, apiCallsUsed: count });
+  } catch (error) {
+    console.error('Error fetching API call count:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * Returns API usage statistics for all users (admin endpoint).
+ *
+ * @param {import('express').Request} req - The incoming request.
+ * @param {import('express').Response} res - The outgoing response.
+ */
+export async function getAllUsersApiUsage(req, res) {
+  try {
+    const usage = await responseService.getAllUsersApiUsage();
+    res.json(usage);
+  } catch (error) {
+    console.error('Error fetching all users API usage:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
