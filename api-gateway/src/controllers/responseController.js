@@ -67,3 +67,51 @@ export async function getAllUserResponses(req, res) {
     return res.status(500).json({ error: 'Failed to fetch user responses' });
   }
 }
+
+const MAX_FREE_API_CALLS = 1000;
+
+/**
+ * Returns the authenticated user's API usage and remaining free calls.
+ *
+ * @param {import('express').Request} req - The authenticated request.
+ * @param {import('express').Response} res - The response with usage data.
+ */
+export async function getMyApiUsage(req, res) {
+  try {
+    const usage = await responseService.getUserApiCallCount(req.user.userId);
+    return res.json({
+      ...usage,
+      maxFreeCalls: MAX_FREE_API_CALLS,
+      remainingCalls: Math.max(0, MAX_FREE_API_CALLS - usage.apiCallsUsed),
+    });
+  } catch (error) {
+    console.error('Error fetching API usage:', error);
+    return res.status(500).json({ error: 'Failed to fetch API usage' });
+  }
+}
+
+/**
+ * Returns API usage for all users. Admin only.
+ *
+ * @param {import('express').Request} req - The authenticated admin request.
+ * @param {import('express').Response} res - The response with all users' usage data.
+ */
+export async function getAllUsersApiUsage(req, res) {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const usage = await responseService.getAllUsersApiUsage();
+    const usageWithLimits = usage.map((userUsage) => ({
+      ...userUsage,
+      maxFreeCalls: MAX_FREE_API_CALLS,
+      remainingCalls: Math.max(0, MAX_FREE_API_CALLS - userUsage.api_calls_used),
+    }));
+
+    return res.json(usageWithLimits);
+  } catch (error) {
+    console.error('Error fetching all users API usage:', error);
+    return res.status(500).json({ error: 'Failed to fetch API usage' });
+  }
+}

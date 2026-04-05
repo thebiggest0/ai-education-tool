@@ -40,6 +40,8 @@ app.delete('/questions/:id', authenticate, questionController.deleteQuestion);
 app.post('/responses', authenticate, responseController.saveResponse);
 app.get('/responses/question/:questionId', authenticate, responseController.getResponseHistory);
 app.get('/responses/user', authenticate, responseController.getAllUserResponses);
+app.get('/responses/usage/me', authenticate, responseController.getMyApiUsage);
+app.get('/responses/usage/all', authenticate, responseController.getAllUsersApiUsage);
 
 /**
  * Starts the API Gateway server.

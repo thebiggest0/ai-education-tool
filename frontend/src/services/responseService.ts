@@ -1,5 +1,22 @@
 import { api } from './api';
 
+export interface ApiUsage {
+  userId: string;
+  apiCallsUsed: number;
+  maxFreeCalls: number;
+  remainingCalls: number;
+}
+
+export interface UserApiUsage {
+  id: string;
+  username: string;
+  email: string;
+  role: string;
+  api_calls_used: number;
+  maxFreeCalls: number;
+  remainingCalls: number;
+}
+
 export interface QuestionResponse {
   id: string;
   user_id: string;
@@ -61,6 +78,32 @@ export async function getResponseHistory(questionId: string): Promise<QuestionRe
  */
 export async function getAllUserResponses(): Promise<QuestionResponse[]> {
   const { data } = await api.request<QuestionResponse[]>('/responses/user', {
+    method: 'GET',
+  });
+
+  return data;
+}
+
+/**
+ * Retrieves the current user's API usage and remaining free calls.
+ *
+ * @returns The user's API usage stats.
+ */
+export async function getMyApiUsage(): Promise<ApiUsage> {
+  const { data } = await api.request<ApiUsage>('/responses/usage/me', {
+    method: 'GET',
+  });
+
+  return data;
+}
+
+/**
+ * Retrieves API usage for all users. Admin only.
+ *
+ * @returns Array of all users with their API usage stats.
+ */
+export async function getAllUsersApiUsage(): Promise<UserApiUsage[]> {
+  const { data } = await api.request<UserApiUsage[]>('/responses/usage/all', {
     method: 'GET',
   });
 

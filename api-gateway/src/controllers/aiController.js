@@ -1,8 +1,12 @@
 import { aiService } from '../services/aiService.js';
+import * as responseService from '../services/responseService.js';
+
+const MAX_FREE_API_CALLS = 1000;
 
 /**
  * Handles requests to send a prompt or compare answers to the AI service.
  * Supports both legacy prompt format and new answer comparison format.
+ * Enforces a per-user limit of 1000 free API calls.
  * Requires authentication — the user's ID is forwarded to the AI service.
  *
  * @param {import('express').Request} req - The request containing either prompt or studentAnswer/correctAnswer.
@@ -11,6 +15,17 @@ import { aiService } from '../services/aiService.js';
 async function sendPrompt(req, res) {
   try {
     const { prompt, studentAnswer, correctAnswer } = req.body;
+
+    // Enforce API call limit
+    const usage = await responseService.getUserApiCallCount(req.user.userId);
+    if (usage.apiCallsUsed >= MAX_FREE_API_CALLS) {
+      return res.status(429).json({
+        error: `You have reached your limit of ${MAX_FREE_API_CALLS} free API calls`,
+        code: 'API_LIMIT_REACHED',
+        apiCallsUsed: usage.apiCallsUsed,
+        maxFreeCalls: MAX_FREE_API_CALLS,
+      });
+    }
 
     // Check if this is an answer comparison request
     if (studentAnswer || correctAnswer) {

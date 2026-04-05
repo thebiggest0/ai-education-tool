@@ -57,3 +57,34 @@ export async function findAllByUser(userId) {
   );
   return result.rows;
 }
+
+/**
+ * Counts the total number of AI API calls a user has made.
+ *
+ * @param {string} userId - The UUID of the student.
+ * @returns {Promise<number>} The total number of responses (API calls) by the user.
+ */
+export async function countByUser(userId) {
+  const result = await readPool.query(
+    'SELECT COUNT(*)::int AS count FROM question_responses WHERE user_id = $1',
+    [userId]
+  );
+  return result.rows[0].count;
+}
+
+/**
+ * Retrieves API usage counts for all users, joined with user details.
+ *
+ * @returns {Promise<Array>} Array of objects with user info and their api_calls_used count.
+ */
+export async function getUsageForAllUsers() {
+  const result = await readPool.query(
+    `SELECT u.id, u.username, u.email, u.role,
+            COUNT(r.id)::int AS api_calls_used
+     FROM users u
+     LEFT JOIN question_responses r ON r.user_id = u.id
+     GROUP BY u.id, u.username, u.email, u.role
+     ORDER BY api_calls_used DESC`
+  );
+  return result.rows;
+}

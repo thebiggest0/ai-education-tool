@@ -34,3 +34,22 @@ export async function getResponseHistory(userId, questionId) {
 export async function getAllUserResponses(userId) {
   return responseRepository.findAllByUser(userId);
 }
+
+/**
+ * Returns the number of AI API calls a user has consumed.
+ *
+ * @param {string} userId - The UUID of the student.
+ * @returns {Promise<number>} The total API calls used.
+ */
+export async function getUserApiCallCount(userId) {
+  return responseRepository.countByUser(userId);
+}
+
+/**
+ * Returns API usage statistics for all users (admin view).
+ *
+ * @returns {Promise<Array>} Array of user records with their api_calls_used count.
+ */
+export async function getAllUsersApiUsage() {
+  return responseRepository.getUsageForAllUsers();
+}
