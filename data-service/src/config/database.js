@@ -68,6 +68,19 @@ async function initializeDatabase() {
 
       CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token_hash ON password_reset_tokens(token_hash);
       CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens(user_id);
+
+      CREATE TABLE IF NOT EXISTS question_bank (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        question_text TEXT NOT NULL,
+        answer_key TEXT NOT NULL,
+        active BOOLEAN NOT NULL DEFAULT FALSE,
+        created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_question_bank_active ON question_bank(active);
+      CREATE INDEX IF NOT EXISTS idx_question_bank_created_by ON question_bank(created_by);
     `);
     console.log('Database schema initialized');
   } finally {
