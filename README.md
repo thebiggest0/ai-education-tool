@@ -11,7 +11,12 @@ A full-stack monorepo with three independently runnable services: a React fronte
 │    Frontend     │  HTTP   │   API Gateway   │  HTTP   │  Data Service   │
 │  React + Vite   │────────▶│   Node.js       │────────▶│   Node.js       │
 │  TypeScript     │◀────────│   JWT Auth      │◀────────│   PostgreSQL    │
-└─────────────────┘         └─────────────────┘         └─────────────────┘
+└─────────────────┘         └────────┬────────┘         └─────────────────┘
+                                     │ HTTP
+                             ┌───────▼────────┐
+                             │  AI Service    │
+                             │  Python/Flask  │
+                             └────────────────┘
 ```
 
 The frontend never talks to the data service directly. All requests go through the API gateway, which verifies JWTs and forwards data operations via an internal shared secret.
@@ -29,6 +34,7 @@ The frontend never talks to the data service directly. All requests go through t
 | `/reset-password?token=` | Public | Set a new password via email link |
 | `/dashboard` | Authenticated | User dashboard |
 | `/admin` | Admin only | Admin dashboard |
+| `/ai-chat` | Authenticated | AI-powered Q&A with persistent chat history |
 
 **Stack:** React 19, React Router 7, Tailwind CSS 4, TypeScript 5
 
@@ -45,6 +51,18 @@ Handles all authentication, JWT issuance and verification, and proxies data requ
 | GET | `/auth/me` | Yes | Get current user profile |
 | POST | `/auth/forgot-password` | No | Send password reset email |
 | POST | `/auth/reset-password` | No | Reset password with token |
+| POST | `/ai/prompt` | Yes | Send answer to AI service for evaluation |
+| GET | `/questions/active-student` | No | Get active question (no answer key) |
+| GET | `/questions/active` | Yes | Get active question (with answer key) |
+| GET | `/questions/instructor` | Yes | Get all instructor's questions |
+| POST | `/questions` | Yes | Create a new question |
+| PUT | `/questions/:id` | Yes | Update a question |
+| POST | `/questions/:id/activate` | Yes | Activate a question |
+| POST | `/questions/:id/deactivate` | Yes | Deactivate a question |
+| DELETE | `/questions/:id` | Yes | Delete a question |
+| POST | `/responses` | Yes | Save student answer + AI evaluation |
+| GET | `/responses/question/:questionId` | Yes | Get chat history for a question |
+| GET | `/responses/user` | Yes | Get all responses by current user |
 
 **Token strategy:** Access tokens expire in 15 minutes. Refresh tokens expire in 7 days and are rotated on every use. Both secrets are separate env vars.
 
@@ -67,6 +85,27 @@ Internal-only service for all PostgreSQL operations. Rejects any request missing
 | POST | `/internal/password-reset/store` | Store reset token |
 | POST | `/internal/password-reset/verify` | Verify reset token |
 | POST | `/internal/password-reset/reset` | Reset password + invalidate token |
+| GET | `/internal/questions/active` | Get active question (with answer key) |
+| GET | `/internal/questions/active-student` | Get active question (no answer key) |
+| GET | `/internal/questions/instructor` | Get instructor's questions |
+| POST | `/internal/questions` | Create a question |
+| PUT | `/internal/questions/:id` | Update a question |
+| POST | `/internal/questions/:id/activate` | Activate a question |
+| POST | `/internal/questions/:id/deactivate` | Deactivate a question |
+| DELETE | `/internal/questions/:id` | Delete a question |
+| POST | `/internal/responses` | Save student answer + AI evaluation |
+| GET | `/internal/responses/question/:questionId` | Get chat history for a question |
+| GET | `/internal/responses/user` | Get all responses by a user |
+
+### `ai-service/` — Python Flask
+
+External AI microservice that evaluates student answers against correct answers using NLP similarity scoring.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/analyze` | Compare student answer to correct answer |
+
+**Stack:** Python, Flask
 
 **Stack:** Express 4, pg (PostgreSQL), bcrypt, dotenv
 
@@ -98,6 +137,26 @@ password_reset_tokens (
   expires_at TIMESTAMPTZ NOT NULL,
   created_at TIMESTAMPTZ
 )
+
+question_bank (
+  id UUID PRIMARY KEY,
+  question_text TEXT NOT NULL,
+  answer_key TEXT NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT FALSE,
+  created_by UUID REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ
+)
+
+question_responses (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  question_id UUID REFERENCES question_bank(id) ON DELETE CASCADE,
+  student_answer TEXT NOT NULL,
+  ai_score NUMERIC(5,2),
+  ai_feedback TEXT,
+  created_at TIMESTAMPTZ
+)
 ```
 
 Tables are created automatically on data service startup.
@@ -124,6 +183,7 @@ Key variables:
 | api-gateway | `ACCESS_TOKEN_SECRET` | JWT signing secret (access tokens) |
 | api-gateway | `REFRESH_TOKEN_SECRET` | JWT signing secret (refresh tokens) |
 | api-gateway | `RESEND_API_KEY` | Resend API key for password reset emails |
+| api-gateway | `AI_SERVICE_URL` | URL of the AI microservice |
 | frontend | `VITE_API_URL` | URL of the API gateway |
 
 Generate secrets with:
