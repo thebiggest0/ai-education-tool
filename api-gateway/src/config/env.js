@@ -8,7 +8,7 @@ export const config = {
   internalSecret: process.env.INTERNAL_SECRET,
   accessTokenSecret: process.env.ACCESS_TOKEN_SECRET,
   refreshTokenSecret: process.env.REFRESH_TOKEN_SECRET,
-  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5179',
+  frontendUrl: 'https://thebiggest0.github.io/ai-education-tool' || process.env.FRONTEND_URL || 'http://localhost:5179',
   resendApiKey: process.env.RESEND_API_KEY,
   resendFromEmail: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
   aiServiceUrl: process.env.AI_SERVICE_URL || 'http://localhost:5000',
