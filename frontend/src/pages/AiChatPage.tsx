@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { aiService } from '../services/aiService';
 import * as questionService from '../services/questionService';
+import * as responseService from '../services/responseService';
 import type { AnswerComparisonResponse } from '../types/ai';
 
 interface Message {
@@ -15,6 +16,8 @@ interface Message {
 /**
  * AI Chat page where authenticated users can answer educational questions
  * and receive AI-powered feedback on their answers.
+ * Loads previous chat history from the database so the conversation resumes
+ * where the user left off.
  *
  * @returns The AI chat page content.
  */
@@ -26,22 +29,31 @@ function AiChatPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingQuestion, setIsFetchingQuestion] = useState(true);
   const [error, setError] = useState('');
-  const [answered, setAnswered] = useState(false);
-  const [activeQuestion, setActiveQuestion] = useState<string | null>(null);
-  const [answerKey, setAnswerKey] = useState<string | null>(null);
+  const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
   const [questionNotFound, setQuestionNotFound] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Fetch the active question when component mounts
+  /**
+   * Scrolls the chat area to the bottom so the latest message is visible.
+   */
+  function scrollToBottom() {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }
+
   useEffect(() => {
-    async function loadQuestion() {
+    scrollToBottom();
+  }, [messages]);
+
+  useEffect(() => {
+    /**
+     * Loads the active question and any previous chat history for the user.
+     */
+    async function loadQuestionAndHistory() {
       try {
         setIsFetchingQuestion(true);
         const question = await questionService.getActiveQuestionForStudent();
-        if (question) {
-          setActiveQuestion(question.question_text);
-          setMessages([{ role: 'ai', content: question.question_text }]);
-          // We don't need answer_key here, but we'll fetch it later during submission
-        } else {
+
+        if (!question) {
           setQuestionNotFound(true);
           setMessages([
             {
@@ -49,7 +61,34 @@ function AiChatPage() {
               content: 'No active question available at the moment. Please check back later.',
             },
           ]);
+          return;
         }
+
+        setActiveQuestionId(question.id);
+
+        const chatMessages: Message[] = [
+          { role: 'ai', content: question.question_text },
+        ];
+
+        const pastResponses = await responseService.getResponseHistory(question.id);
+
+        for (const response of pastResponses) {
+          chatMessages.push({
+            role: 'user',
+            content: response.student_answer,
+          });
+
+          if (response.ai_feedback) {
+            chatMessages.push({
+              role: 'ai',
+              content: response.ai_feedback,
+              score: response.ai_score ?? undefined,
+              feedback: response.ai_feedback,
+            });
+          }
+        }
+
+        setMessages(chatMessages);
       } catch (err) {
         console.error('Error loading question:', err);
         setError('Failed to load the question. Please refresh the page.');
@@ -64,7 +103,7 @@ function AiChatPage() {
       }
     }
 
-    loadQuestion();
+    loadQuestionAndHistory();
   }, []);
 
   /**
@@ -76,37 +115,47 @@ function AiChatPage() {
   }
 
   /**
-   * Sends the student answer to the AI service for evaluation against the correct answer.
+   * Sends the student answer to the AI service for evaluation, then saves
+   * both the answer and AI response to the database.
    */
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = prompt.trim();
-    if (!trimmed || isLoading || questionNotFound) return;
+    if (!trimmed || isLoading || questionNotFound || !activeQuestionId) return;
 
     setError('');
     setMessages((prev) => [...prev, { role: 'user', content: trimmed }]);
     setPrompt('');
     setIsLoading(true);
-    setAnswered(true);
 
     try {
-      // Fetch the answer key for validation
-      const activeQ = await questionService.getActiveQuestion();
-      if (!activeQ) {
+      const activeQuestion = await questionService.getActiveQuestion();
+      if (!activeQuestion) {
         setError('The question is no longer active. Please try again.');
         return;
       }
 
-      const response = await aiService.evaluateAnswer(trimmed, activeQ.answer_key || '');
+      const aiResponse: AnswerComparisonResponse = await aiService.evaluateAnswer(
+        trimmed,
+        activeQuestion.answer_key || ''
+      );
+
       setMessages((prev) => [
         ...prev,
         {
           role: 'ai',
-          content: response.feedback,
-          score: response.score,
-          feedback: response.feedback,
+          content: aiResponse.feedback,
+          score: aiResponse.score,
+          feedback: aiResponse.feedback,
         },
       ]);
+
+      await responseService.saveResponse(
+        activeQuestionId,
+        trimmed,
+        aiResponse.score,
+        aiResponse.feedback
+      );
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Something went wrong';
       setError(message);
@@ -160,7 +209,7 @@ function AiChatPage() {
             <div className="text-center">
               <div className="mb-4">
                 <div className="inline-block animate-spin">
-                  <div className="text-4xl">⏳</div>
+                  <div className="text-4xl">&#8987;</div>
                 </div>
               </div>
               <h2 className="text-xl font-semibold text-slate-900 mb-2">Loading question...</h2>
@@ -170,7 +219,7 @@ function AiChatPage() {
         ) : questionNotFound ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
-              <div className="mb-4 text-5xl">📝</div>
+              <div className="mb-4 text-5xl">&#128221;</div>
               <h2 className="text-2xl font-bold text-slate-900 mb-2">No Active Question</h2>
               <p className="text-slate-600 mb-6">There's no active question at the moment.</p>
               <p className="text-sm text-slate-500">Please check back later or ask your instructor to activate a question.</p>
@@ -210,6 +259,8 @@ function AiChatPage() {
                   </div>
                 </div>
               )}
+
+              <div ref={chatEndRef} />
             </div>
 
             {error && (
@@ -224,7 +275,7 @@ function AiChatPage() {
                 type="text"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder={answered ? 'Type your next answer...' : 'Type your answer...'}
+                placeholder="Type your answer..."
                 className="flex-1 px-4 py-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
                 disabled={isLoading}
               />

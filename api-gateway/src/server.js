@@ -6,6 +6,7 @@ import { authController } from './controllers/authController.js';
 import { passwordResetController } from './controllers/passwordResetController.js';
 import { aiController } from './controllers/aiController.js';
 import * as questionController from './controllers/questionController.js';
+import * as responseController from './controllers/responseController.js';
 
 const app = express();
 
@@ -35,6 +36,10 @@ app.put('/questions/:id', authenticate, questionController.updateQuestion);
 app.post('/questions/:id/activate', authenticate, questionController.activateQuestion);
 app.post('/questions/:id/deactivate', authenticate, questionController.deactivateQuestion);
 app.delete('/questions/:id', authenticate, questionController.deleteQuestion);
+
+app.post('/responses', authenticate, responseController.saveResponse);
+app.get('/responses/question/:questionId', authenticate, responseController.getResponseHistory);
+app.get('/responses/user', authenticate, responseController.getAllUserResponses);
 
 /**
  * Starts the API Gateway server.
