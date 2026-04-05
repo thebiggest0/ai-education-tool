@@ -13,7 +13,7 @@ const resend = new Resend(config.resendApiKey);
  * @returns {Promise<object>} The Resend API response.
  */
 async function sendPasswordResetEmail({ toEmail, username, resetToken }) {
-  const resetUrl = `${config.frontendUrl}/reset-password?token=${resetToken}`;
+  const resetUrl = `${config.frontendUrl}/ai-education-tool/reset-password?token=${resetToken}`;
 
   const { data, error } = await resend.emails.send({
     from: config.resendFromEmail,
