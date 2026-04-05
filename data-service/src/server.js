@@ -6,6 +6,7 @@ import { userController } from './controllers/userController.js';
 import { tokenController } from './controllers/tokenController.js';
 import { passwordResetController } from './controllers/passwordResetController.js';
 import * as questionController from './controllers/questionController.js';
+import * as responseController from './controllers/responseController.js';
 
 dotenv.config();
 
@@ -38,6 +39,10 @@ app.put('/internal/questions/:id', questionController.updateQuestion);
 app.post('/internal/questions/:id/activate', questionController.activateQuestion);
 app.post('/internal/questions/:id/deactivate', questionController.deactivateQuestion);
 app.delete('/internal/questions/:id', questionController.deleteQuestion);
+
+app.post('/internal/responses', responseController.saveResponse);
+app.get('/internal/responses/question/:questionId', responseController.getResponseHistory);
+app.get('/internal/responses/user', responseController.getAllUserResponses);
 
 /**
  * Starts the data service server and initializes the database schema.

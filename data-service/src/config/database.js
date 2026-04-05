@@ -81,6 +81,21 @@ async function initializeDatabase() {
 
       CREATE INDEX IF NOT EXISTS idx_question_bank_active ON question_bank(active);
       CREATE INDEX IF NOT EXISTS idx_question_bank_created_by ON question_bank(created_by);
+
+      CREATE TABLE IF NOT EXISTS question_responses (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        question_id UUID NOT NULL REFERENCES question_bank(id) ON DELETE CASCADE,
+        student_answer TEXT NOT NULL,
+        ai_score NUMERIC(5, 2),
+        ai_feedback TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_question_responses_user_question
+        ON question_responses(user_id, question_id);
+      CREATE INDEX IF NOT EXISTS idx_question_responses_user_id
+        ON question_responses(user_id);
     `);
     console.log('Database schema initialized');
   } finally {
