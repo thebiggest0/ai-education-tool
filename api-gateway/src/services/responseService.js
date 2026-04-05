@@ -69,3 +69,41 @@ export async function getAllUserResponses(userId) {
 
   return data;
 }
+
+/**
+ * Retrieves the API call count for a specific user.
+ *
+ * @param {string} userId - The UUID of the student.
+ * @returns {Promise<{userId: string, apiCallsUsed: number}>} The user's API usage.
+ * @throws {Error} If the data service returns an error.
+ */
+export async function getUserApiCallCount(userId) {
+  const { status, data } = await dataServiceClient.request('/internal/responses/usage', {
+    method: 'GET',
+    headers: { 'x-user-id': userId },
+  });
+
+  if (status !== 200) {
+    throw new Error(data.error || 'Failed to fetch API call count');
+  }
+
+  return data;
+}
+
+/**
+ * Retrieves API usage statistics for all users (admin only).
+ *
+ * @returns {Promise<Array>} Array of user records with api_calls_used counts.
+ * @throws {Error} If the data service returns an error.
+ */
+export async function getAllUsersApiUsage() {
+  const { status, data } = await dataServiceClient.request('/internal/responses/usage/all', {
+    method: 'GET',
+  });
+
+  if (status !== 200) {
+    throw new Error(data.error || 'Failed to fetch all users API usage');
+  }
+
+  return data;
+}
